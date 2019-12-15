@@ -40,22 +40,16 @@ export default class Main extends React.Component {
       e.preventDefault()
     this.fetchCity()
           .then(response => {
-            console.log(response, 'response')
             return response
           })
           .then(city => {
-            console.log(city, 'CITY')
             const dailyData = city.list.filter(reading => reading.dt_txt.includes("18:00:00"))
-            console.log(dailyData,'dailyData')
             const dataClone = {...this.state.data}
             const weeklyDay = dailyData.map(value => new Date(value.dt * 1000).toLocaleString('en', {weekday: 'long'}))
             const values = dailyData.map(value => Math.round((value.main.temp)))
-            console.log(weeklyDay,'wekk')
-            console.log(values,'value')
             dataClone.labels = weeklyDay
             dataClone.datasets[0].data = values
             dataClone.datasets[0].strokeWidth = 2
-            console.log(dataClone,'dataClone')
 
             this.setState({
               data: dataClone,
