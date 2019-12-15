@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { primaryEnd } from '../utils/Colors';
+
 const Header = ({ title }) => (
   <View style={styles.headerContainer}>
     <Text style={styles.headerText}>{title.toUpperCase()}</Text>
@@ -10,8 +12,8 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   headerText: {
-    color: 'white',
-    fontSize: 22,
+    color: primaryEnd,
+    fontSize: 30,
     fontWeight: '500'
   }
 });

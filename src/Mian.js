@@ -1,58 +1,81 @@
 import React from 'react';
-import {StyleSheet, Text, View, ScrollView} from 'react-native';
+import {StyleSheet, View } from 'react-native';
 import {LinearGradient} from 'expo-linear-gradient';
 import {primaryGradientArray} from './utils/Colors';
 import Header from './components/Header'
 import Input from "./components/Input";
-import LineChartCust from "./components/LineChart";
-const url = "http://api.openweathermap.org/data/2.5/group?id=2643741,2644688,2633352,2654675,2988507,2990969,2911298,2925535,2950159,3120501,3128760,5128581,4140963,4930956,5106834,5391959,5368361,5809844,4099974,4440906&appid=dbcaa66da67aa39ff0789a51fdf52524&units=metric"
+import LineChartCust from "./components/LineChartCust";
+import {API_KEY} from "./config";
+
 export default class Main extends React.Component {
   state = {
-    inputValue: '',
-    data: null,
-    loading: false
+    city: '',
+    data: {
+      labels: ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"],
+      datasets:[
+        {
+          data:[0, 0, 0, 0, 0, 0],
+        }
+]
+    },
+    loading: true,
+    error: undefined
   };
   newInputValue = value => {
-    this.setState({
-      inputValue: value
-    });
+      this.setState({
+        city: value,
+      });
   };
-  componentDidMount = () => {
-    this.fetchData()
-  }
-  fetchData = async () => {
-    try {
-      const response = await fetch(url, {
-        method: 'GET'
-      })
-      const data = await response.json()
-      const res = this.CreateWeatherJson(data)
-      console.log(res, 'RES')
-      this.setState({ data: res, loading: true })
-    } catch (e) {
-      console.warn('e', e)
-      throw e
+  loadJson = async (url) => {
+    let resp = await fetch(url)
+    if(resp.status === 200){
+      return resp.json()
     }
   }
-  CreateWeatherJson = (json) => {
-    let newJson = "";
-    for (let i = 0; i < json.list.length; i++) {
-      let cityId = json.list[i].id;
-      let cityName = json.list[i].name;
-      let temp = json.list[i].main.temp
-      newJson = newJson + "{";
-      newJson = newJson + "\"cityId\"" + ": " + cityId + ","
-      newJson = newJson + "\"cityName\"" + ": " + "\"" + cityName + "\"" + ","
-      newJson = newJson + "\"temp\"" + ": " + temp + ","
-      newJson = newJson + "},";
-    }
-    return "[" + newJson.slice(0, newJson.length - 1) + "]"
+  fetchCity = async () => {
+    const { city }  = this.state
+    return await this.loadJson(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&lang=ru&units=metric&APPID=${API_KEY}`)
   }
+  handleCity = async (e) => {
+      e.preventDefault()
+    this.fetchCity()
+          .then(response => {
+            console.log(response, 'response')
+            return response
+          })
+          .then(city => {
+            console.log(city, 'CITY')
+            const dailyData = city.list.filter(reading => reading.dt_txt.includes("18:00:00"))
+            console.log(dailyData,'dailyData')
+            const dataClone = {...this.state.data}
+            const weeklyDay = dailyData.map(value => new Date(value.dt * 1000).toLocaleString('en', {weekday: 'long'}))
+            const values = dailyData.map(value => Math.round((value.main.temp)))
+            console.log(weeklyDay,'wekk')
+            console.log(values,'value')
+            dataClone.labels = weeklyDay
+            dataClone.datasets[0].data = values
+            dataClone.datasets[0].strokeWidth = 2
+            console.log(dataClone,'dataClone')
 
+            this.setState({
+              data: dataClone,
+              error: undefined,
+              loading: false
+            })
+          })
+          .catch(error => {
+            console.log(error, 'error from catch')
+            this.setState({
+              error: alert('Such city does not exist! Try again!!!'),
+              loading: false
+            })
+          })
+  }
   render() {
-    const { inputValue, data } = this.state
+    const { city, data } = this.state
+
     return (
-      <View style={{flex: 1}}>
+      <View style={styles.main}>
         <LinearGradient
           colors={primaryGradientArray}
           style={{flex: 1}}>
@@ -60,15 +83,22 @@ export default class Main extends React.Component {
             <Header title='Weather'/>
           </View>
           <View style={styles.inputContainer}>
-            <Input inputValue={inputValue} onChangeText={this.newInputValue}/>
+            <Input
+              inputValue={city}
+              onChangeText={this.newInputValue}
+              onDoneAddItem={this.handleCity}
+            />
           </View>
-          <LineChartCust />
+          {data ? <LineChartCust city={city} data={data}/> : null}
         </LinearGradient>
       </View>
     );
   }
 }
 const styles = StyleSheet.create({
+  main: {
+    flex: 1
+  },
   container: {
     flex: 1
   },
@@ -78,5 +108,21 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginTop: 40,
     paddingLeft: 15
+  },
+  containerIndicator: {
+    flex: 1,
+    justifyContent: 'center'
+  },
+  horizontal: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 10
+  },
+  button: {
+  },
+  textButton: {
+    fontSize: 34,
+    color: '#f1a895',
+    fontWeight: '500'
   }
 });
